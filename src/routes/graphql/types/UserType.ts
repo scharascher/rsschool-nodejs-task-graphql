@@ -1,4 +1,11 @@
-import {GraphQLInt, GraphQLList, GraphQLNonNull, GraphQLObjectType, GraphQLString} from "graphql";
+import {
+  GraphQLInputObjectType,
+  GraphQLInt,
+  GraphQLList,
+  GraphQLNonNull,
+  GraphQLObjectType,
+  GraphQLString
+} from "graphql";
 import {UUIDType} from "./uuid.js";
 import {ProfileType} from "./ProfileType.js";
 import {PostType} from "./PostType.js";
@@ -50,3 +57,26 @@ export const UserType = new GraphQLObjectTypeWithContext({
     },
   })
 }) as GraphQLObjectType;
+
+export const CreateUserInput = new GraphQLInputObjectType({
+  name: 'CreateUserInput',
+  fields: () => ({
+    name: {
+      type: new GraphQLNonNull(GraphQLString),
+      description: 'User name, required, no default value',
+    },
+    balance: {
+      type: new GraphQLNonNull(GraphQLFloat),
+    },
+  }),
+});
+
+export type CreateUserDto = {name: string; balance: number;};
+
+export const ChangeUserInput = new GraphQLInputObjectType({
+  name: 'ChangeUserInput',
+  fields: () => ({
+    name: {type: GraphQLString,},
+    balance: {type: GraphQLFloat,},
+  }),
+});
