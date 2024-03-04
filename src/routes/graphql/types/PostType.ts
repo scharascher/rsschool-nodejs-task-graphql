@@ -1,8 +1,7 @@
 import {GraphQLNonNull, GraphQLString} from "graphql";
 import {UUIDType} from "./uuid.js";
-import {GraphQLContext, GraphQLObjectTypeWithContext} from "./Context.js";
-import {GraphQLBoolean, GraphQLInputObjectType, GraphQLInt} from "graphql/index.js";
-import {MemberTypeIdField} from "./MemberType.js";
+import {GraphQLObjectTypeWithContext} from "./Context.js";
+import {GraphQLInputObjectType} from "graphql/index.js";
 
 export const PostType = new GraphQLObjectTypeWithContext({
   name: "PostType",

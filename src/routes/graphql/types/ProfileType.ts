@@ -1,10 +1,9 @@
-import {GraphQLBoolean, GraphQLNonNull, GraphQLObjectType} from "graphql";
+import {GraphQLBoolean, GraphQLNonNull} from "graphql";
 import {UUIDType} from "./uuid.js";
 import {MemberType, MemberTypeIdField} from "./MemberType.js";
 import {GraphQLObjectTypeWithContext} from "./Context.js";
 import {MemberTypeId} from "../../member-types/schemas.js";
-import {GraphQLFloat, GraphQLInputObjectType, GraphQLInt, GraphQLString} from "graphql/index.js";
-import MemberTypes from "../../member-types/index.js";
+import {GraphQLInputObjectType, GraphQLInt} from "graphql/index.js";
 
 export const ProfileType = new GraphQLObjectTypeWithContext({
   name: "ProfileType",
@@ -19,8 +18,8 @@ export const ProfileType = new GraphQLObjectTypeWithContext({
       }
     },
     memberType: {type: MemberType,
-      resolve: async ({memberTypeId}: {memberTypeId: MemberTypeId}, _, {db}) => {
-        return db.memberType.findUnique({where: {id: memberTypeId}});
+      resolve: async ({memberTypeId}: {memberTypeId: MemberTypeId}, _, {dataloaders}) => {
+        return dataloaders.memberType.load(memberTypeId);
       } },
   })
 });

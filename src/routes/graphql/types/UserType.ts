@@ -1,6 +1,5 @@
 import {
   GraphQLInputObjectType,
-  GraphQLInt,
   GraphQLList,
   GraphQLNonNull,
   GraphQLObjectType,
@@ -9,9 +8,20 @@ import {
 import {UUIDType} from "./uuid.js";
 import {ProfileType} from "./ProfileType.js";
 import {PostType} from "./PostType.js";
-import {GraphQLContext, GraphQLObjectTypeWithContext} from "./Context.js";
+import {GraphQLObjectTypeWithContext} from "./Context.js";
 import {GraphQLFloat} from "graphql/index.js";
 
+
+export type CreateUserDto = {name: string; balance: number;};
+type SubscribeInfo = {
+  subscriberId: string;
+  authorId: string;
+}
+type UserWithSubscribe = CreateUserDto & {
+  id: string
+  userSubscribedTo?: SubscribeInfo[];
+  subscribedToUser?: SubscribeInfo[];
+};
 export const UserType = new GraphQLObjectTypeWithContext({
   name: "UserType",
   fields: () => ({
@@ -20,40 +30,29 @@ export const UserType = new GraphQLObjectTypeWithContext({
     id: {type: new GraphQLNonNull(UUIDType)},
     profile: {
       type: ProfileType as GraphQLObjectType,
-      resolve: async (args: { id: string }, _, {db}) => {
-        return await db.profile.findUnique({where: {userId: args.id}});
-      }
+      resolve: async ({id}: { id: string }, _, {dataloaders}) =>
+        dataloaders.profile.load(id)
     },
     posts: {
       type: new GraphQLList(PostType),
-      resolve: async ( { id }: { id: string }, _, {db}) =>
-        db.post.findMany({ where: { authorId: id } }),
+      resolve: async ( { id }: { id: string }, _, {dataloaders}) =>
+        dataloaders.post.load(id)
     },
     userSubscribedTo: {
       type: new GraphQLList(UserType),
-      resolve: async ( { id }: { id: string }, _, {db}) =>
-        db.user.findMany({
-          where: {
-            subscribedToUser: {
-              some: {
-                subscriberId: id,
-              },
-            },
-          },
-        }),
+      resolve: async (source: UserWithSubscribe, _, {dataloaders}) => {
+        if (!source.userSubscribedTo?.length) return []
+        const usersIds = source.userSubscribedTo.map((user) => user.authorId);
+        return dataloaders.user.loadMany(usersIds);
+      }
     },
     subscribedToUser: {
       type: new GraphQLList(UserType),
-      resolve: async ({ id }: { id: string }, _, {db}) =>
-        db.user.findMany({
-          where: {
-            userSubscribedTo: {
-              some: {
-                authorId: id,
-              },
-            },
-          },
-        }),
+      resolve: async (source: UserWithSubscribe, _, {dataloaders}) => {
+        if (!source.subscribedToUser?.length) return [];
+        const usersIds = source.subscribedToUser.map((user) => user.subscriberId);
+        return dataloaders.user.loadMany(usersIds);
+      }
     },
   })
 }) as GraphQLObjectType;
@@ -70,8 +69,6 @@ export const CreateUserInput = new GraphQLInputObjectType({
     },
   }),
 });
-
-export type CreateUserDto = {name: string; balance: number;};
 
 export const ChangeUserInput = new GraphQLInputObjectType({
   name: 'ChangeUserInput',

@@ -6,6 +6,7 @@ import {MemberType, MemberTypeIdField} from "./types/MemberType.js";
 import {MemberTypeId} from "../member-types/schemas.js";
 import {PostType} from "./types/PostType.js";
 import {ProfileType} from "./types/ProfileType.js";
+import {parseResolveInfo, ResolveTree, simplifyParsedResolveInfoFragmentWithType} from "graphql-parse-resolve-info";
 
 export const query = new GraphQLObjectType<unknown, GraphQLContext>({
   name: 'Query',
@@ -13,16 +14,33 @@ export const query = new GraphQLObjectType<unknown, GraphQLContext>({
     users: {
       type: new GraphQLList(UserType),
       description: 'All users',
-      resolve:  async (_, __, {db}) => await db.user.findMany(),
+      resolve:  async (_, __, {db,dataloaders}, resolveInfo) => {
+        const resolveTree = parseResolveInfo(resolveInfo) as ResolveTree;
+        const { fields } = simplifyParsedResolveInfoFragmentWithType(
+          resolveTree,
+          resolveInfo.returnType,
+        );
+
+        const users = await db.user.findMany({
+          include: {
+            subscribedToUser: 'subscribedToUser' in fields,
+            userSubscribedTo: 'userSubscribedTo' in fields,
+          },
+        });
+
+        users.forEach((user) => {
+          dataloaders.user.prime(user.id, user);
+        });
+
+        return users;
+      },
     },
     user: {
       type: UserType,
       description: 'Particular user',
       args: { id: { type: new GraphQLNonNull(UUIDType) } },
-      resolve: async (_,{ id }: {id: string},{db}) => await db.user.findUnique(
-        {
-          where: { id }
-        })
+      resolve: async (_,{ id }: {id: string}, {dataloaders}) =>
+        dataloaders.user.load(id)
     },
     memberTypes: {
       type: new GraphQLList(MemberType),
